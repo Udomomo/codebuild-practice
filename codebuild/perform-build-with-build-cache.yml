@@ -4,5 +4,6 @@ phases:
   build:
     commands:
       - echo "Check started"
+      - mkdir -p ./build-cache
       - cp /app/build-cache ./build-cache
       - ./gradlew --build-cache clean build
