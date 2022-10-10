@@ -248,7 +248,7 @@ ENV PYTHON_39_VERSION="3.9.12"
 ARG PYTHON_PIP_VERSION=21.1.2
 ENV PYYAML_VERSION=5.4.1
 
-COPY tools/runtime_configs/python/$PYTHON_37_VERSION /root/.pyenv/plugins/python-build/share/python-build/$PYTHON_37_VERSION
+COPY docker/tools/runtime_configs/python/$PYTHON_37_VERSION /root/.pyenv/plugins/python-build/share/python-build/$PYTHON_37_VERSION
 RUN   env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYTHON_37_VERSION && rm -rf /tmp/*
 RUN   pyenv global  $PYTHON_37_VERSION
 RUN set -ex \
@@ -256,7 +256,7 @@ RUN set -ex \
     && pip3 install --no-cache-dir --upgrade "PyYAML==$PYYAML_VERSION" \
     && pip3 install --no-cache-dir --upgrade 'setuptools==57.4.0' wheel aws-sam-cli boto3 pipenv virtualenv --use-feature=2020-resolver
 
-COPY tools/runtime_configs/python/$PYTHON_38_VERSION /root/.pyenv/plugins/python-build/share/python-build/$PYTHON_38_VERSION
+COPY docker/tools/runtime_configs/python/$PYTHON_38_VERSION /root/.pyenv/plugins/python-build/share/python-build/$PYTHON_38_VERSION
 RUN   env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYTHON_38_VERSION && rm -rf /tmp/*
 RUN   pyenv global  $PYTHON_38_VERSION
 RUN set -ex \
@@ -264,7 +264,7 @@ RUN set -ex \
     && pip3 install --no-cache-dir --upgrade "PyYAML==$PYYAML_VERSION" \
     && pip3 install --no-cache-dir --upgrade 'setuptools==57.4.0' wheel aws-sam-cli boto3 pipenv virtualenv --use-feature=2020-resolver
 
-COPY tools/runtime_configs/python/$PYTHON_39_VERSION /root/.pyenv/plugins/python-build/share/python-build/$PYTHON_39_VERSION
+COPY docker/tools/runtime_configs/python/$PYTHON_39_VERSION /root/.pyenv/plugins/python-build/share/python-build/$PYTHON_39_VERSION
 RUN   env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYTHON_39_VERSION && rm -rf /tmp/*
 RUN   pyenv global  $PYTHON_39_VERSION
 RUN set -ex \
@@ -281,15 +281,15 @@ ENV PHP_80_VERSION="8.0.18"
 
 RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
 ENV PATH="/root/.phpenv/shims:/root/.phpenv/bin:$PATH"
-COPY tools/runtime_configs/php/$PHP_73_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_73_VERSION
+COPY docker/tools/runtime_configs/php/$PHP_73_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_73_VERSION
 RUN phpenv install $PHP_73_VERSION && rm -rf /tmp/* && phpenv global $PHP_73_VERSION
 RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_73_VERSION/etc/conf.d/memory.ini"
 
-COPY tools/runtime_configs/php/$PHP_74_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_74_VERSION
+COPY docker/tools/runtime_configs/php/$PHP_74_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_74_VERSION
 RUN phpenv install $PHP_74_VERSION && rm -rf /tmp/* && phpenv global $PHP_74_VERSION
 RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_74_VERSION/etc/conf.d/memory.ini"
 
-COPY tools/runtime_configs/php/$PHP_80_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_80_VERSION
+COPY docker/tools/runtime_configs/php/$PHP_80_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_80_VERSION
 RUN phpenv install $PHP_80_VERSION && rm -rf /tmp/* && phpenv global $PHP_80_VERSION
 RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_80_VERSION/etc/conf.d/memory.ini"
 
@@ -457,12 +457,26 @@ RUN rbenv  global $RUBY_27_VERSION
 RUN goenv global  $GOLANG_15_VERSION
 
 # Configure SSH
-COPY ssh_config /root/.ssh/config
-COPY runtimes.yml /codebuild/image/config/runtimes.yml
-COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
-COPY legal/bill_of_material.txt     /usr/share/doc/bill_of_material.txt
-COPY amazon-ssm-agent.json          /etc/amazon/ssm/amazon-ssm-agent.json
+COPY docker/ssh_config /root/.ssh/config
+COPY docker/runtimes.yml /codebuild/image/config/runtimes.yml
+COPY docker/dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
+COPY docker/legal/bill_of_material.txt     /usr/share/doc/bill_of_material.txt
+COPY docker/amazon-ssm-agent.json          /etc/amazon/ssm/amazon-ssm-agent.json
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 
 #=======================END of STD:5.0  =================
+
+FROM adoptopenjdk:11 AS sample-app-build
+WORKDIR /app
+COPY . ./
+RUN ./gradlew --build-cache clean build
+
+FROM std_v5
+WORKDIR /app
+COPY . ./
+COPY --from=sample-app-build /app/build-cache ./build-cache
+RUN ./gradlew --build-cache clean build
+CMD /bin/bash
+
+
