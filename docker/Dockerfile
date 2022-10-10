@@ -172,48 +172,6 @@ ENV GOPATH="/go"
 #=======================End of layer: tools  =================
 FROM tools AS runtimes
 
-#****************     .NET-CORE     *******************************************************
-
-ENV DOTNET_31_SDK_VERSION="3.1.419"
-ENV DOTNET_5_SDK_VERSION="5.0.408"
-ENV DOTNET_ROOT="/root/.dotnet"
-
-# Add .NET Core 3.1 Global Tools install folder to PATH
-RUN  /usr/local/bin/dotnet-install.sh -v $DOTNET_31_SDK_VERSION \
-     && dotnet --list-sdks \
-     && rm -rf /tmp/*
-
-# Add .NET Core 5 Global Tools install folder to PATH
-RUN  /usr/local/bin/dotnet-install.sh -v $DOTNET_5_SDK_VERSION \
-     && dotnet --list-sdks \
-     && rm -rf /tmp/*
-
-# Trigger the population of the local package cache
-ENV NUGET_XMLDOC_MODE skip
-RUN set -ex \
-    && mkdir warmup \
-    && cd warmup \
-    && dotnet new \
-    && cd .. \
-    && rm -rf warmup \
-    && rm -rf /tmp/NuGetScratch
-
-# Install Powershell Core
-# See instructions at https://docs.microsoft.com/en-us/powershell/scripting/setup/installing-powershell-core-on-linux
-ARG POWERSHELL_VERSION=7.1.7
-ARG POWERSHELL_DOWNLOAD_URL=https://github.com/PowerShell/PowerShell/releases/download/v$POWERSHELL_VERSION/powershell-$POWERSHELL_VERSION-linux-x64.tar.gz
-ARG POWERSHELL_DOWNLOAD_SHA=5E683CA918A62D9A4345BF5E7FB676D3A273A6302D1F162E936FDEB43DBBA5DE
-
-RUN set -ex \
-    && curl -SL $POWERSHELL_DOWNLOAD_URL --output powershell.tar.gz \
-    && echo "$POWERSHELL_DOWNLOAD_SHA powershell.tar.gz" | sha256sum -c - \
-    && mkdir -p /opt/microsoft/powershell/$POWERSHELL_VERSION \
-    && tar zxf powershell.tar.gz -C /opt/microsoft/powershell/$POWERSHELL_VERSION \
-    && rm powershell.tar.gz \
-    && ln -s /opt/microsoft/powershell/$POWERSHELL_VERSION/pwsh /usr/bin/pwsh
-#****************     END .NET-CORE     *******************************************************
-
-
 #****************      NODEJS     ****************************************************
 
 ENV NODE_12_VERSION="12.22.12"
@@ -228,85 +186,6 @@ RUN     n $NODE_14_VERSION && npm install --save-dev -g -f grunt && npm install 
      && cd / && rm -rf $N_SRC_DIR && rm -rf /tmp/*
 
 #****************      END NODEJS     ****************************************************
-
-#**************** RUBY *********************************************************
-
-ENV RUBY_26_VERSION="2.6.10"
-ENV RUBY_27_VERSION="2.7.6"
-
-RUN    rbenv install $RUBY_26_VERSION && rm -rf /tmp/* \
-    && rbenv install $RUBY_27_VERSION && rm -rf /tmp/* \
-    && rbenv global $RUBY_27_VERSION && ruby -v
-
-#**************** END RUBY *****************************************************
-
-#**************** PYTHON *****************************************************
-ENV PYTHON_37_VERSION="3.7.13"
-ENV PYTHON_38_VERSION="3.8.13"
-ENV PYTHON_39_VERSION="3.9.12"
-
-ARG PYTHON_PIP_VERSION=21.1.2
-ENV PYYAML_VERSION=5.4.1
-
-COPY docker/tools/runtime_configs/python/$PYTHON_37_VERSION /root/.pyenv/plugins/python-build/share/python-build/$PYTHON_37_VERSION
-RUN   env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYTHON_37_VERSION && rm -rf /tmp/*
-RUN   pyenv global  $PYTHON_37_VERSION
-RUN set -ex \
-    && pip3 install --no-cache-dir --upgrade --force-reinstall "pip==$PYTHON_PIP_VERSION" \
-    && pip3 install --no-cache-dir --upgrade "PyYAML==$PYYAML_VERSION" \
-    && pip3 install --no-cache-dir --upgrade 'setuptools==57.4.0' wheel aws-sam-cli boto3 pipenv virtualenv --use-feature=2020-resolver
-
-COPY docker/tools/runtime_configs/python/$PYTHON_38_VERSION /root/.pyenv/plugins/python-build/share/python-build/$PYTHON_38_VERSION
-RUN   env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYTHON_38_VERSION && rm -rf /tmp/*
-RUN   pyenv global  $PYTHON_38_VERSION
-RUN set -ex \
-    && pip3 install --no-cache-dir --upgrade --force-reinstall "pip==$PYTHON_PIP_VERSION" \
-    && pip3 install --no-cache-dir --upgrade "PyYAML==$PYYAML_VERSION" \
-    && pip3 install --no-cache-dir --upgrade 'setuptools==57.4.0' wheel aws-sam-cli boto3 pipenv virtualenv --use-feature=2020-resolver
-
-COPY docker/tools/runtime_configs/python/$PYTHON_39_VERSION /root/.pyenv/plugins/python-build/share/python-build/$PYTHON_39_VERSION
-RUN   env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYTHON_39_VERSION && rm -rf /tmp/*
-RUN   pyenv global  $PYTHON_39_VERSION
-RUN set -ex \
-    && pip3 install --no-cache-dir --upgrade --force-reinstall "pip==$PYTHON_PIP_VERSION" \
-    && pip3 install --no-cache-dir --upgrade "PyYAML==$PYYAML_VERSION" \
-    && pip3 install --no-cache-dir --upgrade 'setuptools==57.4.0' wheel aws-sam-cli boto3 pipenv virtualenv --use-feature=2020-resolver
-
-#**************** END PYTHON *****************************************************
-
-#****************      PHP     ****************************************************
-ENV PHP_73_VERSION="7.3.33"
-ENV PHP_74_VERSION="7.4.29"
-ENV PHP_80_VERSION="8.0.18"
-
-RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
-ENV PATH="/root/.phpenv/shims:/root/.phpenv/bin:$PATH"
-COPY docker/tools/runtime_configs/php/$PHP_73_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_73_VERSION
-RUN phpenv install $PHP_73_VERSION && rm -rf /tmp/* && phpenv global $PHP_73_VERSION
-RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_73_VERSION/etc/conf.d/memory.ini"
-
-COPY docker/tools/runtime_configs/php/$PHP_74_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_74_VERSION
-RUN phpenv install $PHP_74_VERSION && rm -rf /tmp/* && phpenv global $PHP_74_VERSION
-RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_74_VERSION/etc/conf.d/memory.ini"
-
-COPY docker/tools/runtime_configs/php/$PHP_80_VERSION /root/.phpenv/plugins/php-build/share/php-build/definitions/$PHP_80_VERSION
-RUN phpenv install $PHP_80_VERSION && rm -rf /tmp/* && phpenv global $PHP_80_VERSION
-RUN echo "memory_limit = 1G;" >> "/root/.phpenv/versions/$PHP_80_VERSION/etc/conf.d/memory.ini"
-
-# Install Composer globally
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
-#****************      END PHP     ****************************************************
-
-#****************     GOLANG     ****************************************************
-ENV GOLANG_15_VERSION="1.15.15"
-ENV GOLANG_16_VERSION="1.16.15"
-
-RUN goenv install $GOLANG_15_VERSION && rm -rf /tmp/* && \
-    goenv install $GOLANG_16_VERSION && rm -rf /tmp/* && \
-    goenv global  $GOLANG_15_VERSION
-
-RUN go get -u github.com/golang/dep/cmd/dep
-#****************      END GOLANG     *******************************
 
 #=======================End of layer: runtimes  =================
 
@@ -451,10 +330,10 @@ FROM runtimes_n_corretto AS std_v5
 
 # Activate runtime versions specific to image version.
 RUN n $NODE_14_VERSION
-RUN pyenv  global $PYTHON_39_VERSION
-RUN phpenv global $PHP_80_VERSION
-RUN rbenv  global $RUBY_27_VERSION
-RUN goenv global  $GOLANG_15_VERSION
+# RUN pyenv  global $PYTHON_39_VERSION
+# RUN phpenv global $PHP_80_VERSION
+# RUN rbenv  global $RUBY_27_VERSION
+# RUN goenv global  $GOLANG_15_VERSION
 
 # Configure SSH
 COPY docker/ssh_config /root/.ssh/config
