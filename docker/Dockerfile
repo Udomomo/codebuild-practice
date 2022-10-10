@@ -353,9 +353,4 @@ RUN ./gradlew --build-cache clean build
 
 FROM std_v5
 WORKDIR /app
-COPY . ./
 COPY --from=sample-app-build /app/build-cache ./build-cache
-RUN ./gradlew --build-cache clean build
-CMD /bin/bash
-
-
