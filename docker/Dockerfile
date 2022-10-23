@@ -60,37 +60,6 @@ RUN useradd codebuild-user
 
 FROM core AS tools
 
-# Install Firefox
-RUN set -ex \
-    && apt-add-repository -y "deb http://archive.canonical.com/ubuntu $(lsb_release -sc) partner" \
-    && apt-get install -y -qq firefox \
-    && firefox --version
-
-# Install GeckoDriver
-RUN set -ex \
-    && apt-get install -y -qq firefox-geckodriver \
-    && geckodriver --version
-
-# Install Chrome
-RUN set -ex \
-    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | tee /etc/apt/sources.list.d/google.list \
-    && apt-get update \
-    && apt-get install -y -qq google-chrome-stable \
-    && google-chrome --version
-
-# Install ChromeDriver
-RUN set -ex \
-    && CHROME_VERSION=`google-chrome --version | awk -F '[ .]' '{print $3"."$4"."$5}'` \
-    && CHROME_DRIVER_VERSION=`wget -qO- chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION` \
-    && wget -qO /tmp/chromedriver_linux64.zip https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip \
-    && unzip -q /tmp/chromedriver_linux64.zip -d /opt \
-    && rm /tmp/chromedriver_linux64.zip \
-    && mv /opt/chromedriver /opt/chromedriver-$CHROME_DRIVER_VERSION \
-    && chmod 755 /opt/chromedriver-$CHROME_DRIVER_VERSION \
-    && ln -s /opt/chromedriver-$CHROME_DRIVER_VERSION /usr/bin/chromedriver \
-    && chromedriver --version
-
 # Install stunnel
 RUN set -ex \
    && STUNNEL_VERSION=5.64 \
@@ -131,43 +100,11 @@ RUN curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscli
     && aws --version
 
 # Install env tools for runtimes
-# Dotnet
-ENV PATH "/root/.dotnet/:/root/.dotnet/tools/:$PATH"
-RUN set -ex  \
-&& wget -qO /usr/local/bin/dotnet-install.sh https://dot.net/v1/dotnet-install.sh \
-&& chmod +x /usr/local/bin/dotnet-install.sh
-
 #nodejs
 ARG SRC_DIR="/usr/src"
 ARG N_SRC_DIR="$SRC_DIR/n"
 RUN git clone https://github.com/tj/n $N_SRC_DIR \
      && cd $N_SRC_DIR && make install 
-
-#ruby
-ARG RBENV_SRC_DIR="/usr/local/rbenv"
-
-ENV PATH="/root/.rbenv/shims:$RBENV_SRC_DIR/bin:$RBENV_SRC_DIR/shims:$PATH" \
-    RUBY_BUILD_SRC_DIR="$RBENV_SRC_DIR/plugins/ruby-build"
-
-RUN set -ex \
-    && git clone https://github.com/rbenv/rbenv.git $RBENV_SRC_DIR \
-    && mkdir -p $RBENV_SRC_DIR/plugins \
-    && git clone https://github.com/rbenv/ruby-build.git $RUBY_BUILD_SRC_DIR \
-    && sh $RUBY_BUILD_SRC_DIR/install.sh
-
-#python
-RUN curl https://pyenv.run | bash
-ENV PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"
-
-#php
-RUN curl -L https://raw.githubusercontent.com/phpenv/phpenv-installer/master/bin/phpenv-installer | bash
-ENV PATH="/root/.phpenv/shims:/root/.phpenv/bin:$PATH"
-
-#go
-RUN git clone https://github.com/syndbg/goenv.git $HOME/.goenv
-ENV PATH="/root/.goenv/shims:/root/.goenv/bin:/go/bin:$PATH"
-ENV GOENV_DISABLE_GOPATH=1
-ENV GOPATH="/go"
 
 #=======================End of layer: tools  =================
 FROM tools AS runtimes
@@ -198,15 +135,15 @@ ENV JRE_11_HOME="/usr/lib/jvm/java-11-amazon-corretto"
 ENV JAVA_8_HOME="/usr/lib/jvm/java-1.8.0-amazon-corretto"
 ENV JDK_8_HOME="/usr/lib/jvm/java-1.8.0-amazon-corretto"
 ENV JRE_8_HOME="/usr/lib/jvm/java-1.8.0-amazon-corretto/jre"
-ARG ANT_VERSION=1.10.12
-ARG MAVEN_HOME="/opt/maven"
-ARG MAVEN_VERSION=3.6.3
+# ARG ANT_VERSION=1.10.12
+# ARG MAVEN_HOME="/opt/maven"
+# ARG MAVEN_VERSION=3.6.3
 ARG INSTALLED_GRADLE_VERSIONS="5.6.4 6.7"
 ARG GRADLE_VERSION=5.6.4
-ARG SBT_VERSION=1.6.2
+# ARG SBT_VERSION=1.6.2
 ARG GRADLE_PATH="$SRC_DIR/gradle"
-ARG ANT_DOWNLOAD_SHA512="2287dc5cfc21043c14e5413f9afb1c87c9f266ec2a9ba2d3bf2285446f6e4ccb59b558bf2e5c57911a05dfa293c7d5c7ad60ac9f744ba11406f4e6f9a27b2403"
-ARG MAVEN_DOWNLOAD_SHA512="c35a1803a6e70a126e80b2b3ae33eed961f83ed74d18fcd16909b2d44d7dada3203f1ffe726c17ef8dcca2dcaa9fca676987befeadc9b9f759967a8cb77181c0"
+# ARG ANT_DOWNLOAD_SHA512="2287dc5cfc21043c14e5413f9afb1c87c9f266ec2a9ba2d3bf2285446f6e4ccb59b558bf2e5c57911a05dfa293c7d5c7ad60ac9f744ba11406f4e6f9a27b2403"
+# ARG MAVEN_DOWNLOAD_SHA512="c35a1803a6e70a126e80b2b3ae33eed961f83ed74d18fcd16909b2d44d7dada3203f1ffe726c17ef8dcca2dcaa9fca676987befeadc9b9f759967a8cb77181c0"
 ARG GRADLE_DOWNLOADS_SHA256="abc10bcedb58806e8654210f96031db541bcd2d6fc3161e81cb0572d6a15e821 5.6.4\n0080de8491f0918e4f529a6db6820fa0b9e818ee2386117f4394f95feb1d5583 6.7"
 ARG SBT_DOWNLOAD_SHA256="637637b6c4e6fa04ab62cd364061e32b12480b09001cd23303df62b36fadd440"
 ENV LOG4J_UNSAFE_VERSIONS="2.11.1 1.2.8"
@@ -234,7 +171,7 @@ RUN set -ex \
     && apt-get update \
     && apt-get install -y -qq --force-yes libc6-i386 \
        lib32stdc++6 lib32gcc1 lib32ncurses6 \
-       lib32z1 libqt5widgets5 
+       lib32z1 libqt5widgets5
 
 RUN set -ex \
     # Install Corretto 11
@@ -245,23 +182,9 @@ RUN set -ex \
           update-alternatives --install /usr/bin/$tool $tool $tool_path 10000; \
           update-alternatives --set $tool $tool_path; \
         done \
-     && rm $JAVA_HOME/lib/security/cacerts && ln -s /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts \
-    # Install Ant
-    && curl -LSso /var/tmp/apache-ant-$ANT_VERSION-bin.tar.gz https://archive.apache.org/dist/ant/binaries/apache-ant-$ANT_VERSION-bin.tar.gz  \
-    && echo "$ANT_DOWNLOAD_SHA512 /var/tmp/apache-ant-$ANT_VERSION-bin.tar.gz" | sha512sum -c - \
-    && tar -xzf /var/tmp/apache-ant-$ANT_VERSION-bin.tar.gz -C /opt \
-    && rm /var/tmp/apache-ant-$ANT_VERSION-bin.tar.gz \
-    && update-alternatives --install /usr/bin/ant ant /opt/apache-ant-$ANT_VERSION/bin/ant 10000 
+     && rm $JAVA_HOME/lib/security/cacerts && ln -s /etc/ssl/certs/java/cacerts $JAVA_HOME/lib/security/cacerts
 
 RUN set -ex \
-    # Install Maven
-    && mkdir -p $MAVEN_HOME \
-    && curl -LSso /var/tmp/apache-maven-$MAVEN_VERSION-bin.tar.gz https://apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz \
-    && echo "$MAVEN_DOWNLOAD_SHA512 /var/tmp/apache-maven-$MAVEN_VERSION-bin.tar.gz" | sha512sum -c - \
-    && tar xzf /var/tmp/apache-maven-$MAVEN_VERSION-bin.tar.gz -C $MAVEN_HOME --strip-components=1 \
-    && rm /var/tmp/apache-maven-$MAVEN_VERSION-bin.tar.gz \
-    && update-alternatives --install /usr/bin/mvn mvn /opt/maven/bin/mvn 10000 \
-    && mkdir -p $MAVEN_CONFIG_HOME \
     # Install Gradle
     && mkdir -p $GRADLE_PATH \
     && for version in $INSTALLED_GRADLE_VERSIONS; do { \
@@ -279,16 +202,10 @@ RUN set -ex \
      }; done \
     # Install default GRADLE_VERSION to path
     && ln -s /usr/local/gradle-$GRADLE_VERSION/bin/gradle /usr/bin/gradle \
-    && rm -rf $GRADLE_PATH \
-    # Install SBT
-    && curl -fSL "https://github.com/sbt/sbt/releases/download/v${SBT_VERSION}/sbt-${SBT_VERSION}.tgz" -o sbt.tgz \
-    && echo "${SBT_DOWNLOAD_SHA256} *sbt.tgz" | sha256sum -c - \
-    && tar xzf sbt.tgz -C /usr/local/bin/ \
-    && rm sbt.tgz \
-    && for version in $LOG4J_UNSAFE_VERSIONS; do find / -name log4j*-$version.jar | xargs rm -f; done
+    && rm -rf $GRADLE_PATH
 
 ENV PATH "/usr/local/bin/sbt/bin:$PATH"
-RUN sbt version -Dsbt.rootdir=true
+# RUN sbt version -Dsbt.rootdir=true
 # Cleanup
 RUN rm -fr /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && apt-get clean
@@ -330,10 +247,6 @@ FROM runtimes_n_corretto AS std_v5
 
 # Activate runtime versions specific to image version.
 RUN n $NODE_14_VERSION
-# RUN pyenv  global $PYTHON_39_VERSION
-# RUN phpenv global $PHP_80_VERSION
-# RUN rbenv  global $RUBY_27_VERSION
-# RUN goenv global  $GOLANG_15_VERSION
 
 # Configure SSH
 COPY docker/ssh_config /root/.ssh/config
@@ -353,4 +266,5 @@ RUN ./gradlew --build-cache clean build
 
 FROM std_v5
 WORKDIR /app
-COPY --from=sample-app-build /app/build-cache ./build-cache
+COPY --from=sample-app-build /app/build-cache ./
+CMD ["/bin", "bash"]
