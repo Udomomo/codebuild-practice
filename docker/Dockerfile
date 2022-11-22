@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # Copyright 2020-2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 # Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance with the License.
@@ -261,10 +263,9 @@ ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 
 FROM adoptopenjdk:11 AS sample-app-build
 WORKDIR /app
-COPY . ./
-RUN ./gradlew --build-cache clean build
+RUN --mount=type=bind,target=./,rw ./gradlew --build-cache clean build
 
 FROM std_v5
 WORKDIR /app
-COPY --from=sample-app-build /app/build-cache ./
-CMD ["/bin", "bash"]
+COPY --from=sample-app-build /root/.gradle/caches /root/.gradle/caches
+RUN ls -la /root/.gradle/caches/build-cache*
