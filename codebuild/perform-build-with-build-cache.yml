@@ -1,10 +1,13 @@
 version: 0.2
 
 phases:
+  pre_build:
+    commands:
+      - pwd
+      - ls
+      - cd
   build:
     commands:
       - echo "Check started"
-      - mkdir -p ./build-cache
-      - cp -r /app/build-cache ./
       - ./gradlew --build-cache clean build
       - ls

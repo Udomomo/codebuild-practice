@@ -1,5 +1,7 @@
 version: 0.1
 
+env:
+  DOCKER_BUILDKIT: "1"
 phases:
   pre_build:
     commands:
@@ -8,7 +10,7 @@ phases:
   build:
     commands:
       - echo "Custom image build started"
-      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG -f docker/Dockerfile .
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG -f docker/Dockerfile --progress=plain .
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
   post_build:
     commands:
